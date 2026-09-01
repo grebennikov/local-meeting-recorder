@@ -53,8 +53,8 @@ query_pw_create = f"""Summarize the content of the provided transcript of the co
 #print (query_pw_create)
 
 response = client.chat.completions.create(
-#    model="gemma4-it-e4b-FLM",
-    model="qwen3.5-4b-FLM",
+    model="gemma4-it-e4b-FLM",
+#    model="qwen3.5-4b-FLM",
     messages=[
         {"role": "system", "content": "You are a IT system administrator."},
         {"role": "user", "content": query_pw_create}
