@@ -47,6 +47,9 @@ trap - SIGINT
 echo ""
 echo "=== Continuing Script Execution ==="
 
+echo "=== Removing pipewire loopback ==="
+killall pw-loopback
+
 echo "=== Compressing the audio ==="
 ffmpeg -i $OUTPUT_FILE -vn -ac 1 -ar 16000 -c:a libopus -b:a 16k $COMPRESSED_FILE
 
@@ -64,7 +67,5 @@ echo "=== Summarizing the transcript ==="
 python3 ~/AI/summary.py < transcript.txt > summary.txt
 
 echo "=== Completed! Directory name $TIMESTAMP ==="
-
-#killall pw-loopback
 
 popd

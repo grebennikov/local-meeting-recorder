@@ -1,0 +1,15 @@
+#!/bin/bash
+#wpctl status
+#pactl list sources short
+#pw-link -o
+echo "=== Creating Pipewire loopback device and linking to the wired mic and its USB headphones ==="
+pw-loopback --capture-props='media.class="Audio/Sink" node.name="Whisper_Combo_Sink" node.passive=true' --playback-props='media.class="Audio/Source" node.name="Whisper_Combo" node.description="Whisper_media"'  &
+sleep 1
+pw-link "alsa_output.usb-C-Media_Electronics_Inc._USB_Advanced_Audio_Device-00.analog-stereo:monitor_FL" "Whisper_Combo_Sink:playback_FL"
+pw-link "alsa_output.usb-C-Media_Electronics_Inc._USB_Advanced_Audio_Device-00.analog-stereo:monitor_FR" "Whisper_Combo_Sink:playback_FR"
+
+pw-link "alsa_input.usb-C-Media_Electronics_Inc._USB_Advanced_Audio_Device-00.analog-stereo:capture_FL" "Whisper_Combo_Sink:playback_FL"
+pw-link "alsa_input.usb-C-Media_Electronics_Inc._USB_Advanced_Audio_Device-00.analog-stereo:capture_FR" "Whisper_Combo_Sink:playback_FR"
+
+#pw-record --target Whisper_Combo --rate 16000 --channels 1 /tmp/output.wav
+#killall pw-loopback"
