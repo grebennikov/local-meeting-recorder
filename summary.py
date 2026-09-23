@@ -37,7 +37,17 @@ file_content = sys.stdin.read()
 #with open(file_path, "r", encoding="utf-8") as file:
 #    file_content = file.read()
 
-query_pw_create = f"""Summarize the content of the provided transcript of the conversation. Assume multiple participants."
+query_input = sys.argv[1]
+
+with open(query_input, "r") as query_file:
+    query =  query_file.read()
+
+#query_pw_create = f"""Summarize the content of the provided transcript of the conversation. Assume multiple participants."
+#query_pw_create = f"""You are a secretary in a technical company that is asked to summarize the the content of the provided \
+#        transcript of the conversation. Assume multiple participants. Make sure to capture the timestamp in the beginning of \
+#        the transcript and make a specific line in the beginning of the summary when it is generated. Include date and time in the format of MM-DD-YYYY HH:MM:SS"
+
+query_pw_create = f"""{query}\
 
 --- ATTACHED FILE: transcript ---
 {file_content}
@@ -55,8 +65,9 @@ query_pw_create = f"""Summarize the content of the provided transcript of the co
 response = client.chat.completions.create(
     model="gemma4-it-e4b-FLM",
 #    model="qwen3.5-4b-FLM",
+#    model="Gemma-4-E4B-it-GGUF",
     messages=[
-        {"role": "system", "content": "You are a IT system administrator."},
+        {"role": "system", "content": "You are a secretary in the IT company capturing technical meeting."},
         {"role": "user", "content": query_pw_create}
 #        {"role": "user", "content": "aaa"}
     ],

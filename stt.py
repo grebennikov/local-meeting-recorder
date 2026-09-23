@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import os
 import sys
 import requests
@@ -8,8 +9,9 @@ from pyannote_onnx import PyannoteONNX
 # ---------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------
-#AUDIO_FILE = "/tmp/output1_compressed.ogg"
+#AUDIO_FILE = "/tmp/output_audio.wav"
 AUDIO_FILE = sys.argv[1]
+TIMESTAMP = sys.argv[2]
 
 LEMONADE_URL = "http://localhost:13305/api/v1/audio/transcriptions"
 MODEL = "whisper-v3-turbo-FLM"
@@ -23,21 +25,26 @@ MODEL = "whisper-v3-turbo-FLM"
 # ---------------------------------------------------------
 print("1. Requesting transcription from local Lemonade Server...")
 
+with open("transcript.txt", "w") as f:
+    print(TIMESTAMP, file=f)
+
 with open(AUDIO_FILE, "rb") as f:
     response = requests.post(
         LEMONADE_URL,
         files={"file": f},
         data={
             "model": MODEL,
-            "response_format": "verbose_json",
+#            "response_format": "srt",
+#            "response_format": "verbose_json",
+            "response_format": "json",
             "timestamp_granularities[]": "segment"
-        }
+        },
+        timeout=1800
     )
-
 transcript_data = response.json()
 segments = transcript_data.get("segments", [])
 
 
-with open("transcript.txt", "w") as f:
+with open("transcript.txt", "a") as f:
     print(transcript_data, file=f)
 

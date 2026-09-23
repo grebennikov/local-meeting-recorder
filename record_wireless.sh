@@ -58,14 +58,19 @@ lemonade-server status|grep -i 'whisper.*flm'|| lemonade-server load whisper-v3-
 
 echo "=== Transcribing audio ==="
 
-python3 ~/AI/stt.py $COMPRESSED_FILE
+python3 ~/AI/stt.py $COMPRESSED_FILE $TIMESTAMP
 
 echo "=== Checking or loading Gemma model ==="
 lemonade-server status|grep -i 'gemma.*flm'|| lemonade-server load gemma4-it-e4b-FLM
 
 echo "=== Summarizing the transcript ==="
-python3 ~/AI/summary.py < transcript.txt > summary.txt
+python3 ~/AI/summary.py ~/AI/query < transcript.txt > $TIMESTAMP.md
 
 echo "=== Completed! Directory name $TIMESTAMP ==="
 
+echo "=== Uploading to the Google Drive ==="
+
 popd
+
+python3 ~/AI/gdrive_upload.py Meeting_recordings ~/meetings/$TIMESTAMP/$TIMESTAMP.md
+
