@@ -53,6 +53,9 @@ killall pw-loopback
 echo "=== Compressing the audio ==="
 ffmpeg -i $OUTPUT_FILE -vn -ac 1 -ar 16000 -c:a libopus -b:a 16k $COMPRESSED_FILE
 
+echo "=== Checking or updating Lemonade NPU backend ==="
+lemonade-server backends|grep 'npu.*installed' || lemonade-server backends install flm:npu
+
 echo "=== Checking or loading Whisper model ==="
 lemonade-server status|grep -i 'whisper.*flm'|| lemonade-server load whisper-v3-turbo-FLM
 

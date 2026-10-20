@@ -35,8 +35,9 @@ with open(AUDIO_FILE, "rb") as f:
         data={
             "model": MODEL,
 #            "response_format": "srt",
-#            "response_format": "verbose_json",
-            "response_format": "json",
+            "response_format": "verbose_json",
+#            "response_format": "json",
+            "return_timestamps": "True",
             "timestamp_granularities[]": "segment"
         },
         timeout=1800
