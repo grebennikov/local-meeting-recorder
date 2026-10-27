@@ -1,8 +1,10 @@
+#!/usr/bin/python3
 import sys
 import subprocess
 import os
 import signal
 import threading
+from datetime import datetime
 import gi
 
 gi.require_version('Gtk', '4.0')
@@ -16,6 +18,10 @@ class MeetingRecorderWindow(Adw.ApplicationWindow):
         self.set_title("Local Meeting Recorder")
         self.set_default_size(380, 280)
         self.set_resizable(True)  # Allows resizing/moving dynamically
+
+        # Base directory for logs
+        self.log_dir = os.path.expanduser("~/AI/logs")
+        os.makedirs(self.log_dir, exist_ok=True)
 
         # --- Window Shell & HeaderBar (Moveable / Floating Window) ---
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
@@ -62,6 +68,27 @@ class MeetingRecorderWindow(Adw.ApplicationWindow):
         self.active_proc = None
         self.active_mode = None  # None, 1, or 2
 
+	# --- Terminal Output Window (Below Buttons) ---
+        log_frame = Gtk.Frame()
+        log_frame.set_vexpand(True)
+        box.append(log_frame)
+
+        self.scrolled_window = Gtk.ScrolledWindow()
+        self.scrolled_window.set_has_frame(False)
+        log_frame.set_child(self.scrolled_window)
+
+        self.text_view = Gtk.TextView()
+        self.text_view.set_editable(False)
+        self.text_view.set_cursor_visible(False)
+        self.text_view.set_monospace(True)  # Monospace terminal font
+        self.text_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        self.text_buffer = self.text_view.get_buffer()
+        self.scrolled_window.set_child(self.text_view)
+
+	# State Variables
+        self.active_proc = None
+        self.active_mode = None
+
         # --- Intercept Window Close Event ---
         self.connect("close-request", self.on_close_requested)
 
@@ -104,10 +131,16 @@ class MeetingRecorderWindow(Adw.ApplicationWindow):
     # --- Process Management ---
     def start_script(self, mode, script_name, status_text):
         script_path = os.path.expanduser(script_name)
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        self.current_log_file = os.path.join(self.log_dir, f"{mode}_{timestamp}.log")
 
         # Attach to new process group so SIGINT reaches sub-processes
         self.active_proc = subprocess.Popen(
             ["bash", script_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,  # Line-buffered output
             start_new_session=True
         )
         self.active_mode = mode
@@ -125,6 +158,38 @@ class MeetingRecorderWindow(Adw.ApplicationWindow):
             self.btn_mode_1.set_sensitive(False)
 
         self.status_label.set_label(f"Status: {status_text}")
+
+	# Worker thread to read and stream script output to GUI
+        threading.Thread(
+           target=self._stream_output_task,
+           args=(self.current_log_file,),
+           daemon=True
+        ).start()
+
+    def _stream_output_task(self, log_path):
+        """Tees process output simultaneously to disk and to the GTK text viewer."""
+        with open(log_path, "a", encoding="utf-8", buffering=1) as log_fp:
+            for line in iter(self.active_proc.stdout.readline, ''):
+                if line:
+                    # Write to file on disk and flush immediately
+                    log_fp.write(line)
+                    log_fp.flush()
+                    # Schedule GTK buffer update on the UI thread
+                    GLib.idle_add(self.append_log, line)
+
+            self.active_proc.stdout.close()
+            self.active_proc.wait()
+            log_fp.write("\n=== Process Finished ===\n")
+        GLib.idle_add(self._reset_ui_state)
+
+    def append_log(self, text):
+        """Appends log text and auto-scrolls to the bottom."""
+        end_iter = self.text_buffer.get_end_iter()
+        self.text_buffer.insert(end_iter, text)
+
+        # Auto-scroll to bottom of window
+        mark = self.text_buffer.create_mark(None, self.text_buffer.get_end_iter(), False)
+        self.text_view.scroll_to_mark(mark, 0.0, True, 0.0, 1.0)
 
     def stop_current_recording(self):
         if self.active_proc and self.active_proc.poll() is None:
@@ -162,11 +227,12 @@ class MeetingRecorderWindow(Adw.ApplicationWindow):
 
         # Reset Button 2
         self.btn_mode_2.set_sensitive(True)
-        self.btn_mode_2.set_label("Start Meeting Record ith wired")
+        self.btn_mode_2.set_label("Start Meeting Record with wired")
         self.btn_mode_2.remove_css_class("destructive-action")
         self.btn_mode_2.add_css_class("accent")
 
         self.status_label.set_label("Status: Idle (Task Finished)")
+        self.append_log("\n=== Process Finished ===\n")
 
 
 class MeetingApp(Adw.Application):
